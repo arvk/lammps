@@ -63,7 +63,7 @@ PairBVV::~PairBVV()
 
 void PairBVV::compute(int eflag, int vflag)
 {
-  int i,j,k,ii,jj,kk,inum,jnum,jnumm1;
+  int i,j,k,ii,jj,kk,inum,jnum;
   int itype,jtype,ktype,ijparam,ikparam,ijkparam;
   tagint itag,jtag;
   double xtmp,ytmp,ztmp,delx,dely,delz,evdwl,fpair;
@@ -150,9 +150,7 @@ void PairBVV::compute(int eflag, int vflag)
                            evdwl,0.0,fpair,delx,dely,delz);
     }
 
-    jnumm1 = numshort - 1;
-
-    for (jj = 0; jj < jnumm1; jj++) {
+    for (jj = 0; jj < numshort; jj++) {
       j = neighshort[jj];
       jtype = map[type[j]];
       ijparam = elem2param[itype][jtype][jtype];
@@ -164,7 +162,7 @@ void PairBVV::compute(int eflag, int vflag)
       double fjxtmp,fjytmp,fjztmp;
       fjxtmp = fjytmp = fjztmp = 0.0;
 
-      for (kk = jj+1; kk < numshort; kk++) {
+      for (kk = 0; kk < numshort; kk++) {
         k = neighshort[kk];
         ktype = map[type[k]];
         ikparam = elem2param[itype][ktype][ktype];
@@ -479,35 +477,8 @@ void PairBVV::setup_params()
   // (cut = a*sigma)
 
   for (m = 0; m < nparams; m++) {
-    params[m].cut = params[m].sigma*params[m].littlea;
-
-    rtmp = params[m].cut;
-    if (params[m].tol > 0.0) {
-      if (params[m].tol > 0.01) params[m].tol = 0.01;
-      if (params[m].gamma < 1.0)
-        rtmp = rtmp +
-          params[m].gamma * params[m].sigma / log(params[m].tol);
-      else rtmp = rtmp +
-             params[m].sigma / log(params[m].tol);
-    }
-    params[m].cutsq = rtmp * rtmp;
-
-    params[m].sigma_gamma = params[m].sigma*params[m].gamma;
-    params[m].lambda_epsilon = params[m].lambda*params[m].epsilon;
-    params[m].lambda_epsilon2 = 2.0*params[m].lambda*params[m].epsilon;
-    params[m].c1 = params[m].biga*params[m].epsilon *
-      params[m].powerp*params[m].bigb *
-      pow(params[m].sigma,params[m].powerp);
-    params[m].c2 = params[m].biga*params[m].epsilon*params[m].powerq *
-      pow(params[m].sigma,params[m].powerq);
-    params[m].c3 = params[m].biga*params[m].epsilon*params[m].bigb *
-      pow(params[m].sigma,params[m].powerp+1.0);
-    params[m].c4 = params[m].biga*params[m].epsilon *
-      pow(params[m].sigma,params[m].powerq+1.0);
-    params[m].c5 = params[m].biga*params[m].epsilon*params[m].bigb *
-      pow(params[m].sigma,params[m].powerp);
-    params[m].c6 = params[m].biga*params[m].epsilon *
-      pow(params[m].sigma,params[m].powerq);
+    params[m].cut = params[m].rcut;
+    params[m].cutsq = params[m].cut * params[m].cut;
   }
 
   // set cutmax to max of all params
