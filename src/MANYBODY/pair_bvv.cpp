@@ -343,7 +343,7 @@ void PairBVV::read_file(char *file)
     fp = force->open_potential(file);
     if (fp == NULL) {
       char str[128];
-      snprintf(str,128,"Cannot open Stillinger-Weber potential file %s",file);
+      snprintf(str,128,"Cannot open Bond Valence Vector potential file %s",file);
       error->one(FLERR,str);
     }
   }
@@ -395,7 +395,7 @@ void PairBVV::read_file(char *file)
     }
 
     if (nwords != params_per_line)
-      error->all(FLERR,"Incorrect format in Stillinger-Weber potential file");
+      error->all(FLERR,"Incorrect format in Bond Valence Vector potential file");
 
     // words = ptrs to all words in line
 
@@ -428,24 +428,12 @@ void PairBVV::read_file(char *file)
     params[nparams].ielement = ielement;
     params[nparams].jelement = jelement;
     params[nparams].kelement = kelement;
-    params[nparams].epsilon = atof(words[3]);
-    params[nparams].sigma = atof(words[4]);
-    params[nparams].littlea = atof(words[5]);
-    params[nparams].lambda = atof(words[6]);
-    params[nparams].gamma = atof(words[7]);
-    params[nparams].costheta = atof(words[8]);
-    params[nparams].biga = atof(words[9]);
-    params[nparams].bigb = atof(words[10]);
-    params[nparams].powerp = atof(words[11]);
-    params[nparams].powerq = atof(words[12]);
-    params[nparams].tol = atof(words[13]);
-
-    if (params[nparams].epsilon < 0.0 || params[nparams].sigma < 0.0 ||
-        params[nparams].littlea < 0.0 || params[nparams].lambda < 0.0 ||
-        params[nparams].gamma < 0.0 || params[nparams].biga < 0.0 ||
-        params[nparams].bigb < 0.0 || params[nparams].powerp < 0.0 ||
-        params[nparams].powerq < 0.0 || params[nparams].tol < 0.0)
-      error->all(FLERR,"Illegal Stillinger-Weber parameter");
+    params[nparams].V0 = atof(words[3]);
+    params[nparams].W0 = atof(words[4]);
+    params[nparams].S = atof(words[5]);
+    params[nparams].D = atof(words[6]);
+    params[nparams].r0 = atof(words[7]);
+    params[nparams].C0 = atof(words[8]);
 
     nparams++;
   }
