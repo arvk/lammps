@@ -329,7 +329,7 @@ double PairBVV::init_one(int i, int j)
 
 void PairBVV::read_file(char *file)
 {
-  int params_per_line = 9;
+  int params_per_line = 10;
   char **words = new char*[params_per_line+1];
 
   memory->sfree(params);
@@ -434,6 +434,7 @@ void PairBVV::read_file(char *file)
     params[nparams].D = atof(words[6]);
     params[nparams].r0 = atof(words[7]);
     params[nparams].C0 = atof(words[8]);
+    params[nparams].rcut = atof(words[9]);
 
     nparams++;
   }

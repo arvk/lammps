@@ -22,14 +22,9 @@ class PairBVV : public Pair {
   virtual void init_style();
 
   struct Param {
-    double epsilon,sigma;
-    double littlea,lambda,gamma,costheta;
-    double biga,bigb;
-    double powerp,powerq;
-    double tol;
-    double cut,cutsq;
-    double sigma_gamma,lambda_epsilon,lambda_epsilon2;
-    double c1,c2,c3,c4,c5,c6;
+    double V0, W0, S, D, r0, C0, rcut;
+    double cut, cutsq;
+    double costheta;
     int ielement,jelement,kelement;
   };
 
