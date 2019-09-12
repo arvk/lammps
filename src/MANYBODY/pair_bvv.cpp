@@ -64,9 +64,9 @@ PairBVV::~PairBVV()
 void PairBVV::compute(int eflag, int vflag)
 {
   int i,j,k,ii,jj,kk,inum,jnum;
-  int itype,jtype,ktype,ijparam,ikparam,ijkparam;
+  int itype,jtype,ktype,ijparam,ikparam,ijkparam,iiparam;
   tagint itag,jtag;
-  double xtmp,ytmp,ztmp,delx,dely,delz,evdwl,fpair;
+  double xtmp,ytmp,ztmp,delx,dely,delz,evdwl,fpair, evdwltmp;
   double rsq,rsq1,rsq2;
   double delr1[3],delr2[3],fj[3],fk[3];
   int *ilist,*jlist,*numneigh,**firstneigh;
@@ -87,7 +87,9 @@ void PairBVV::compute(int eflag, int vflag)
   firstneigh = list->firstneigh;
 
   double fxtmp,fytmp,fztmp;
+  double Vi;
 
+  // Beginning of 2-body term
   // loop over full neighbor list of my atoms
 
   for (ii = 0; ii < inum; ii++) {
@@ -98,16 +100,20 @@ void PairBVV::compute(int eflag, int vflag)
     ytmp = x[i][1];
     ztmp = x[i][2];
     fxtmp = fytmp = fztmp = 0.0;
+    Vi = 0.0;
+    evdwltmp = 0.0;
 
-    // two-body interactions, skip half of them
+    // Force on each ith atom computed separately. No newton imposed
 
     jlist = firstneigh[i];
     jnum = numneigh[i];
     int numshort = 0;
 
+    iiparam = elem2param[itype][itype][itype];
+
+
     for (jj = 0; jj < jnum; jj++) {
       j = jlist[jj];
-      j &= NEIGHMASK;
 
       delx = xtmp - x[j][0];
       dely = ytmp - x[j][1];
@@ -126,29 +132,32 @@ void PairBVV::compute(int eflag, int vflag)
         }
       }
 
-      jtag = tag[j];
-      if (itag > jtag) {
-        if ((itag+jtag) % 2 == 0) continue;
-      } else if (itag < jtag) {
-        if ((itag+jtag) % 2 == 1) continue;
-      } else {
-        if (x[j][2] < ztmp) continue;
-        if (x[j][2] == ztmp && x[j][1] < ytmp) continue;
-        if (x[j][2] == ztmp && x[j][1] == ytmp && x[j][0] < xtmp) continue;
-      }
+      //jtag = tag[j];
 
-      twobody(&params[ijparam],rsq,fpair,eflag,evdwl);
+      //twobody(&params[ijparam],rsq,fpair,eflag,evdwl);
+      twobody(&params[ijparam],rsq,fpair,Vitmp,eflag,evdwltmp);
 
       fxtmp += delx*fpair;
       fytmp += dely*fpair;
       fztmp += delz*fpair;
+      Vi += Vitmp;
+      //evdwl += evdwltmp
+    }
+
+    f[i][0] += (fxtmp * (Vi-params[iiparam]->V0) * (-2*params[iiparam]->S0));
+    f[i][1] += (fytmp * (Vi-params[iiparam]->V0) * (-2*params[iiparam]->S0));
+    f[i][2] += (fztmp * (Vi-params[iiparam]->V0) * (-2*params[iiparam]->S0));
+    evdwl += pow(Vi - params[iiparam]->V0, 2) * params[iiparam]->S0
+
+      // EVFLAG LINE HAS NOT BEEN UPDATED
+
       f[j][0] -= delx*fpair;
       f[j][1] -= dely*fpair;
       f[j][2] -= delz*fpair;
 
       if (evflag) ev_tally(i,j,nlocal,newton_pair,
                            evdwl,0.0,fpair,delx,dely,delz);
-    }
+
 
     for (jj = 0; jj < numshort; jj++) {
       j = neighshort[jj];
@@ -492,21 +501,16 @@ void PairBVV::setup_params()
 
 /* ---------------------------------------------------------------------- */
 
-void PairBVV::twobody(Param *param, double rsq, double &fforce,
+void PairBVV::twobody(Param *param, double rsq, double &fforce, double &Vi,
                      int eflag, double &eng)
 {
   double r,rinvsq,rp,rq,rainv,rainvsq,expsrainv;
 
   r = sqrt(rsq);
   rinvsq = 1.0/rsq;
-  rp = pow(r,-param->powerp);
-  rq = pow(r,-param->powerq);
-  rainv = 1.0 / (r - param->cut);
-  rainvsq = rainv*rainv*r;
-  expsrainv = exp(param->sigma * rainv);
-  fforce = (param->c1*rp - param->c2*rq +
-            (param->c3*rp -param->c4*rq) * rainvsq) * expsrainv * rinvsq;
-  if (eflag) eng = (param->c5*rp - param->c6*rq) * expsrainv;
+  Vi = pow(param->r0,param->C0) / pow(r,param->C0);
+  fforce = param->C0 * pow(param->r0, param->C0) / pow(r, (param->C0)+2);
+  if (eflag) eng += Vi;
 }
 
 /* ---------------------------------------------------------------------- */

@@ -43,7 +43,7 @@ class PairBVV : public Pair {
   virtual void allocate();
   void read_file(char *);
   virtual void setup_params();
-  void twobody(Param *, double, double &, int, double &);
+  void twobody(Param *, double, double &, int, double &, double &);
   void threebody(Param *, Param *, Param *, double, double, double *, double *,
                  double *, double *, int, double &);
 };
