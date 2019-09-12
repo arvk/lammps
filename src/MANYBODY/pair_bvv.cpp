@@ -301,9 +301,9 @@ void PairBVV::coeff(int narg, char **arg)
 void PairBVV::init_style()
 {
   if (atom->tag_enable == 0)
-    error->all(FLERR,"Pair style Stillinger-Weber requires atom IDs");
+    error->all(FLERR,"Pair style Bond Valence Vector requires atom IDs");
   if (force->newton_pair == 0)
-    error->all(FLERR,"Pair style Stillinger-Weber requires newton pair on");
+    error->all(FLERR,"Pair style Bond Valence Vector requires newton pair on");
 
   // need a full neighbor list
 
