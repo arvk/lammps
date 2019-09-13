@@ -72,9 +72,6 @@ void PairBVV::compute(int eflag, int vflag)
   double force_prefactor;
   int *ilist,*jlist,*numneigh,**firstneigh;
 
-  evdwl = 0.0;
-  ev_init(eflag,vflag);
-
   double **x = atom->x;
   double **f = atom->f;
   tagint *tag = atom->tag;
@@ -82,15 +79,19 @@ void PairBVV::compute(int eflag, int vflag)
   int nlocal = atom->nlocal;
   int newton_pair = force->newton_pair;
 
+  double fxtmp,fytmp,fztmp;
+  double fjxtmp,fjytmp,fjztmp;
+  double fkxtmp,fkytmp,fkztmp;
+  double Vi,Vitmp,Wisq;
+  double cosine_theta,exp_prefact;
+
+  evdwl = 0.0;
+  ev_init(eflag,vflag);
+
   inum = list->inum;
   ilist = list->ilist;
   numneigh = list->numneigh;
   firstneigh = list->firstneigh;
-
-  double fxtmp,fytmp,fztmp;
-  double fjxtmp,fjytmp,fjztmp;
-  double fkxtmp,fkytmp,fkztmp;
-  double Vi,Wisq;
 
   // Beginning of 2-body term
   // loop over full neighbor list of my atoms
@@ -113,7 +114,6 @@ void PairBVV::compute(int eflag, int vflag)
 
     iiparam = elem2param[itype][itype][itype];
 
-
     // Loop just for the evaluation of Vi
     Vi = 0.0;
     for (jj = 0; jj < jnum; jj++) {
@@ -135,13 +135,13 @@ void PairBVV::compute(int eflag, int vflag)
         }
       }
 
-      twobody(&params[ijparam],rsq,fpair,Vitmp,eflag,evdwltmp);
+      twobody(&params[ijparam],rsq,fpair,&Vitmp,eflag,evdwltmp);
       Vi += Vitmp;
     }
     // By here, Vi is already evaluated
     // Compute the energy of the system and update the EVtally (only energies, no virial)
-    evdwl = pow(Vi - params[iiparam]->V0, 2) * params[iiparam]->S;
-    if (evflag) evtally_full(i,evdwl,0.0,0.0,0.0,0.0);
+    evdwl = pow(Vi - params[iiparam].V0, 2) * params[iiparam].S;
+    if (evflag) ev_tally_full(i,evdwl,0.0,0.0,0.0,0.0,0.0);
 
     // This is a loop to compute only the 2 body forces
     for (jj = 0; jj < jnum; jj++) {
@@ -164,9 +164,9 @@ void PairBVV::compute(int eflag, int vflag)
         }
       }
 
-      twobody(&params[ijparam],rsq,fpair,Vitmp,eflag,evdwltmp);
+      twobody(&params[ijparam],rsq,fpair,&Vitmp,eflag,evdwltmp);
 
-      force_prefactor = (Vi - params[iiparam]->V0) * (-2*params[iiparam]->S0);
+      force_prefactor = (Vi - params[iiparam].V0) * (-2*params[iiparam].S);
       fxtmp += delx*fpair*force_prefactor;
       fytmp += dely*fpair*force_prefactor;
       fztmp += delz*fpair*force_prefactor;
@@ -178,12 +178,12 @@ void PairBVV::compute(int eflag, int vflag)
       f[j][1] -= fytmp*force_prefactor;
       f[j][2] -= fztmp*force_prefactor;
 
-      if (evflag) evtally(i,j,nlocal,newton_pair,0.0,0.0,fpair*force_prefactor,delx,dely,delz)
+      if (evflag) ev_tally(i,j,nlocal,newton_pair,0.0,0.0,fpair*force_prefactor,delx,dely,delz);
     }
 
 
     // Computing only the bond valence vector sqared, Wisq
-    Wisq = 0.0
+    Wisq = 0.0;
     for (jj = 0; jj < numshort; jj++) {
       j = neighshort[jj];
       jtype = map[type[j]];
@@ -192,7 +192,7 @@ void PairBVV::compute(int eflag, int vflag)
       delr1[1] = x[j][1] - ytmp;
       delr1[2] = x[j][2] - ztmp;
       rsq1 = delr1[0]*delr1[0] + delr1[1]*delr1[1] + delr1[2]*delr1[2];
-      r1 = sqrt(rsq1)
+      r1 = sqrt(rsq1);
 
       for (kk = 0; kk < numshort; kk++) {
         k = neighshort[kk];
@@ -204,10 +204,10 @@ void PairBVV::compute(int eflag, int vflag)
         delr2[1] = x[k][1] - ytmp;
         delr2[2] = x[k][2] - ztmp;
         rsq2 = delr2[0]*delr2[0] + delr2[1]*delr2[1] + delr2[2]*delr2[2];
-        r2 = sqrt(rsq2)
+        r2 = sqrt(rsq2);
 
-        Wisq += (pow(params[ijparam]->r0,params[ijparam]->C0) * pow(params[ikparam]->r0,params[ikparam]->C0) /
-               (pow(r1,params[ijparam]->C0) * pow(r2,params[ikparam]->C0) ) ) *
+        Wisq += (pow(params[ijparam].r0,params[ijparam].C0) * pow(params[ikparam].r0,params[ikparam].C0) /
+               (pow(r1,params[ijparam].C0) * pow(r2,params[ikparam].C0) ) ) *
         (((delr1[0]*delr2[0])+(delr1[1]*delr2[1])+(delr1[2]*delr2[2]))/(r1*r2));
 
       } // k-loop ends
@@ -215,12 +215,12 @@ void PairBVV::compute(int eflag, int vflag)
 
     // By this point, Wisq is computed
 
-    evdwl = params[iiparam]->D * ( pow( Wisq - pow(params[iiparam]->W0,2), 2) );
+    evdwl = params[iiparam].D * ( pow( Wisq - pow(params[iiparam].W0,2), 2) );
 
-    if (evflag) evtally_full(i,evdwl,0.0,0.0,0.0,0.0);
+    if (evflag) ev_tally_full(i,evdwl,0.0,0.0,0.0,0.0,0.0);
 
 
-    force_prefactor = (Wisq - pow(params[iiparam]->W0,2)) * (-2.0 * params[iiparam]->D)
+    force_prefactor = (Wisq - pow(params[iiparam].W0,2)) * (-2.0 * params[iiparam].D);
 
     // Loop to compute 3 body forces only
     for (jj = 0; jj < numshort; jj++) {
@@ -250,37 +250,37 @@ void PairBVV::compute(int eflag, int vflag)
         r2inv = 1.0/r2;
 
         cosine_theta = ((delr1[0]*delr2[0]) + (delr1[1]*delr2[1]) + (delr1[2]*delr2[2])) * r1inv * r2inv;
-        exp_prefact = (pow(params[ijparam]->r0,params[ijparam]->C0) * pow(params[ikparam]->r0,params[ikparam]->C0) /
-                       (pow(r1,params[ijparam]->C0) * pow(r2,params[ikparam]->C0) ) );
+        exp_prefact = (pow(params[ijparam].r0,params[ijparam].C0) * pow(params[ikparam].r0,params[ikparam].C0) /
+                       (pow(r1,params[ijparam].C0) * pow(r2,params[ikparam].C0) ) );
 
-        fj[0] = exp_prefact * cosine_theta * delr1[0] * invr1 * invr1;
-        fj[0] += exp_prefact * delr1[0] * invr1 * invr2;
-        fj[0] -= exp_prefact * cosine_theta * delr1[0] * invr1 * invr1;
+        fj[0] = exp_prefact * cosine_theta * delr1[0] * r1inv * r1inv;
+        fj[0] += exp_prefact * delr1[0] * r1inv * r2inv;
+        fj[0] -= exp_prefact * cosine_theta * delr1[0] * r1inv * r1inv;
         fjxtmp += fj[0] * force_prefactor;
 
-        fk[0]  = exp_prefact * cosine_theta * delr2[0] * invr2 * invr2;
-        fk[0] += exp_prefact * delr2[0] * invr1 * invr2;
-        fk[0] -= exp_prefact * cosine_theta * delr2[0] * invr2 * invr2;
+        fk[0]  = exp_prefact * cosine_theta * delr2[0] * r2inv * r2inv;
+        fk[0] += exp_prefact * delr2[0] * r1inv * r2inv;
+        fk[0] -= exp_prefact * cosine_theta * delr2[0] * r2inv * r2inv;
         fkxtmp = fk[0] * force_prefactor;
 
-        fj[1] = exp_prefact * cosine_theta * delr1[1] * invr1 * invr1;
-        fj[1] += exp_prefact * delr1[1] * invr1 * invr2;
-        fj[1] -= exp_prefact * cosine_theta * delr1[1] * invr1 * invr1;
+        fj[1] = exp_prefact * cosine_theta * delr1[1] * r1inv * r1inv;
+        fj[1] += exp_prefact * delr1[1] * r1inv * r2inv;
+        fj[1] -= exp_prefact * cosine_theta * delr1[1] * r1inv * r1inv;
         fjytmp += fj[1] * force_prefactor;
 
-        fk[1]  = exp_prefact * cosine_theta * delr2[1] * invr2 * invr2;
-        fk[1] += exp_prefact * delr2[1] * invr1 * invr2;
-        fk[1] -= exp_prefact * cosine_theta * delr2[1] * invr2 * invr2;
+        fk[1]  = exp_prefact * cosine_theta * delr2[1] * r2inv * r2inv;
+        fk[1] += exp_prefact * delr2[1] * r1inv * r2inv;
+        fk[1] -= exp_prefact * cosine_theta * delr2[1] * r2inv * r2inv;
         fkytmp = fk[1] * force_prefactor;
 
-        fj[2] = exp_prefact * cosine_theta * delr1[2] * invr1 * invr1;
-        fj[2] += exp_prefact * delr1[2] * invr1 * invr2;
-        fj[2] -= exp_prefact * cosine_theta * delr1[2] * invr1 * invr1;
+        fj[2] = exp_prefact * cosine_theta * delr1[2] * r1inv * r1inv;
+        fj[2] += exp_prefact * delr1[2] * r1inv * r2inv;
+        fj[2] -= exp_prefact * cosine_theta * delr1[2] * r1inv * r1inv;
         fjztmp += fj[2] * force_prefactor;
 
-        fk[2]  = exp_prefact * cosine_theta * delr2[2] * invr2 * invr2;
-        fk[2] += exp_prefact * delr2[2] * invr1 * invr2;
-        fk[2] -= exp_prefact * cosine_theta * delr2[2] * invr2 * invr2;
+        fk[2]  = exp_prefact * cosine_theta * delr2[2] * r2inv * r2inv;
+        fk[2] += exp_prefact * delr2[2] * r1inv * r2inv;
+        fk[2] -= exp_prefact * cosine_theta * delr2[2] * r2inv * r2inv;
         fkztmp = fk[2] * force_prefactor;
 
         fxtmp -=  fjxtmp + fkxtmp;
@@ -298,6 +298,7 @@ void PairBVV::compute(int eflag, int vflag)
       f[j][1] += fjytmp;
       f[j][2] += fjztmp;
     }
+
     f[i][0] += fxtmp;
     f[i][1] += fytmp;
     f[i][2] += fztmp;
@@ -598,16 +599,16 @@ void PairBVV::setup_params()
 
 /* ---------------------------------------------------------------------- */
 
-void PairBVV::twobody(Param *param, double rsq, double &fforce, double &Vi,
+void PairBVV::twobody(Param *param, double rsq, double &fforce, double *Vi,
                      int eflag, double &eng)
 {
   double r,rinvsq,rp,rq,rainv,rainvsq,expsrainv;
 
   r = sqrt(rsq);
   rinvsq = 1.0/rsq;
-  Vi = pow(param->r0,param->C0) / pow(r,param->C0);
+  *Vi = pow(param->r0,param->C0) / pow(r,param->C0);
   fforce = param->C0 * pow(param->r0, param->C0) / pow(r, (param->C0)+2);
-  if (eflag) eng += Vi;
+  if (eflag) eng += *Vi;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -617,52 +618,5 @@ void PairBVV::threebody(Param *paramij, Param *paramik, Param *paramijk,
                        double *delr1, double *delr2,
                        double *fj, double *fk, int eflag, double &eng)
 {
-  double r1,rinvsq1,rainv1,gsrainv1,gsrainvsq1,expgsrainv1;
-  double r2,rinvsq2,rainv2,gsrainv2,gsrainvsq2,expgsrainv2;
-  double rinv12,cs,delcs,delcssq,facexp,facrad,frad1,frad2;
-  double facang,facang12,csfacang,csfac1,csfac2;
-
-  r1 = sqrt(rsq1);
-  rinvsq1 = 1.0/rsq1;
-  rainv1 = 1.0/(r1 - paramij->cut);
-  gsrainv1 = paramij->sigma_gamma * rainv1;
-  gsrainvsq1 = gsrainv1*rainv1/r1;
-  expgsrainv1 = exp(gsrainv1);
-
-  r2 = sqrt(rsq2);
-  rinvsq2 = 1.0/rsq2;
-  rainv2 = 1.0/(r2 - paramik->cut);
-  gsrainv2 = paramik->sigma_gamma * rainv2;
-  gsrainvsq2 = gsrainv2*rainv2/r2;
-  expgsrainv2 = exp(gsrainv2);
-
-  rinv12 = 1.0/(r1*r2);
-  cs = (delr1[0]*delr2[0] + delr1[1]*delr2[1] + delr1[2]*delr2[2]) * rinv12;
-  delcs = cs - paramijk->costheta;
-  delcssq = delcs*delcs;
-
-  facexp = expgsrainv1*expgsrainv2;
-
-  // facrad = sqrt(paramij->lambda_epsilon*paramik->lambda_epsilon) *
-  //          facexp*delcssq;
-
-  facrad = paramijk->lambda_epsilon * facexp*delcssq;
-  frad1 = facrad*gsrainvsq1;
-  frad2 = facrad*gsrainvsq2;
-  facang = paramijk->lambda_epsilon2 * facexp*delcs;
-  facang12 = rinv12*facang;
-  csfacang = cs*facang;
-  csfac1 = rinvsq1*csfacang;
-
-  fj[0] = delr1[0]*(frad1+csfac1)-delr2[0]*facang12;
-  fj[1] = delr1[1]*(frad1+csfac1)-delr2[1]*facang12;
-  fj[2] = delr1[2]*(frad1+csfac1)-delr2[2]*facang12;
-
-  csfac2 = rinvsq2*csfacang;
-
-  fk[0] = delr2[0]*(frad2+csfac2)-delr1[0]*facang12;
-  fk[1] = delr2[1]*(frad2+csfac2)-delr1[1]*facang12;
-  fk[2] = delr2[2]*(frad2+csfac2)-delr1[2]*facang12;
-
-  if (eflag) eng = facrad;
+  return;
 }
