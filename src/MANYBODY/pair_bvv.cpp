@@ -63,14 +63,14 @@ PairBVV::~PairBVV()
 
 void PairBVV::compute(int eflag, int vflag)
 {
-  int i,j,k,ii,jj,kk,inum,jnum;
+  int i,j,k,ii,jj,kk,inum,jnum,knum;
   int itype,jtype,ktype,ijparam,ikparam,ijkparam,iiparam;
   tagint itag,jtag;
   double xtmp,ytmp,ztmp,delx,dely,delz,evdwl,fpair, evdwltmp;
   double rsq,rsq1,rsq2,r1,r2,r1inv,r2inv;
   double delr1[3],delr2[3],fj[3],fk[3];
   double force_prefactor;
-  int *ilist,*jlist,*numneigh,**firstneigh;
+  int *ilist,*jlist,*klist,*numneigh,**firstneigh;
 
   double **x = atom->x;
   double **f = atom->f;
@@ -183,10 +183,15 @@ void PairBVV::compute(int eflag, int vflag)
     }
 
 
+    jlist = firstneigh[i];
+    jnum = numneigh[i];
+    klist = firstneigh[i];
+    knum = numneigh[i];
+
     // Computing only the bond valence vector sqared, Wisq
     Wisq = 0.0;
-    for (jj = 0; jj < numshort; jj++) {
-      j = neighshort[jj];
+    for (jj = 0; jj < jnum; jj++) {
+      j = jlist[jj];
       jtype = map[type[j]];
       ijparam = elem2param[itype][jtype][jtype];
       delr1[0] = x[j][0] - xtmp;
@@ -195,8 +200,8 @@ void PairBVV::compute(int eflag, int vflag)
       rsq1 = delr1[0]*delr1[0] + delr1[1]*delr1[1] + delr1[2]*delr1[2];
       r1 = sqrt(rsq1);
 
-      for (kk = 0; kk < numshort; kk++) {
-        k = neighshort[kk];
+      for (kk = 0; kk < knum; kk++) {
+        k = klist[kk];
         ktype = map[type[k]];
         ikparam = elem2param[itype][ktype][ktype];
         ijkparam = elem2param[itype][jtype][ktype];
@@ -216,7 +221,7 @@ void PairBVV::compute(int eflag, int vflag)
 
     // By this point, Wisq is computed
 
-    evdwl = params[iiparam].D * ( pow( Wisq - pow(params[iiparam].W0,2), 2) );
+    evdwl = params[iiparam].D * (pow(Wisq-pow(params[iiparam].W0, 2), 2));
 
     if (evflag) ev_tally_full(i,evdwl,0.0,0.0,0.0,0.0,0.0);
 
