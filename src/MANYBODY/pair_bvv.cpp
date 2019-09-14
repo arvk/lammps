@@ -118,13 +118,14 @@ void PairBVV::compute(int eflag, int vflag)
     Vi = 0.0;
     for (jj = 0; jj < jnum; jj++) {
       j = jlist[jj];
-
       delx = xtmp - x[j][0];
       dely = ytmp - x[j][1];
       delz = ztmp - x[j][2];
 
+      rsq = delx*delx + dely*dely + delz*delz;
       jtype = map[type[j]];
       ijparam = elem2param[itype][jtype][jtype];
+
       if (rsq >= params[ijparam].cutsq) {
         continue;
       } else {
@@ -608,7 +609,7 @@ void PairBVV::twobody(Param *param, double rsq, double &fforce, double *Vi,
   rinvsq = 1.0/rsq;
   *Vi = pow(param->r0,param->C0) / pow(r,param->C0);
   fforce = param->C0 * pow(param->r0, param->C0) / pow(r, (param->C0)+2);
-  if (eflag) eng += *Vi;
+  if (eflag) eng = *Vi;
 }
 
 /* ---------------------------------------------------------------------- */
