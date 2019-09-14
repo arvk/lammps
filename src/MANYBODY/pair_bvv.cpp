@@ -229,8 +229,8 @@ void PairBVV::compute(int eflag, int vflag)
     force_prefactor = (Wisq - pow(params[iiparam].W0,2)) * (-2.0 * params[iiparam].D);
 
     // Loop to compute 3 body forces only
-    for (jj = 0; jj < numshort; jj++) {
-      j = neighshort[jj];
+    for (jj = 0; jj < jnum; jj++) {
+      j = jlist[jj];
       jtype = map[type[j]];
       ijparam = elem2param[itype][jtype][jtype];
       delr1[0] = x[j][0] - xtmp;
@@ -242,8 +242,8 @@ void PairBVV::compute(int eflag, int vflag)
 
       fjxtmp = fjytmp = fjztmp = 0.0;
 
-      for (kk = 0; kk < numshort; kk++) {
-        k = neighshort[kk];
+      for (kk = 0; kk < knum; kk++) {
+        k = klist[kk];
         ktype = map[type[k]];
         ikparam = elem2param[itype][ktype][ktype];
         ijkparam = elem2param[itype][jtype][ktype];
