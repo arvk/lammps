@@ -17,8 +17,8 @@ PairStyle(lj12/cut,PairLJ12Cut)
 
 #else
 
-#ifndef LMP_PAIR_LJ_CUT_H
-#define LMP_PAIR_LJ_CUT_H
+#ifndef LMP_PAIR_LJ12_CUT_H
+#define LMP_PAIR_LJ12_CUT_H
 
 #include "pair.h"
 
