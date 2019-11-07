@@ -142,7 +142,7 @@ void PairBVV::compute(int eflag, int vflag)
     // By here, Vi is already evaluated
     // Compute the energy of the system and update the EVtally (only energies, no virial)
     evdwl = pow(Vi - params[iiparam].V0, 2) * params[iiparam].S;
-    //if (evflag) ev_tally_full(i,evdwl,0.0,0.0,0.0,0.0,0.0);
+    if (evflag) ev_tally_full(i,evdwl*2.0,0.0,0.0,0.0,0.0,0.0);  // I JUST CHANGED THIS
 
     // This is a loop to compute only the 2 body forces
     for (jj = 0; jj < jnum; jj++) {
@@ -171,14 +171,14 @@ void PairBVV::compute(int eflag, int vflag)
       fytmp = dely*fpair*force_prefactor;
       fztmp = delz*fpair*force_prefactor;
 
-      // f[i][0] += fxtmp;
-      // f[i][1] += fytmp;
-      // f[i][2] += fztmp;
-      // f[j][0] -= fxtmp;
-      // f[j][1] -= fytmp;
-      // f[j][2] -= fztmp;
+      f[i][0] += fxtmp;
+      f[i][1] += fytmp;
+      f[i][2] += fztmp;
+      f[j][0] -= fxtmp;
+      f[j][1] -= fytmp;
+      f[j][2] -= fztmp;
 
-      //if (evflag) ev_tally(i,j,nlocal,newton_pair,0.0,0.0,-fpair*force_prefactor,delx,dely,delz);
+      if (evflag) ev_tally(i,j,nlocal,newton_pair,0.0,0.0,-fpair*force_prefactor,delx,dely,delz); // I JUST CHANGED THIS
     }
 
 
@@ -225,7 +225,7 @@ void PairBVV::compute(int eflag, int vflag)
     // By this point, Wisq is computed
     evdwl = Wisq - pow(params[iiparam].W0, 2);
     evdwl_3 = params[iiparam].D * pow(evdwl, 2);
-    if (evflag) ev_tally_full(i,evdwl_3,0.0,0.0,0.0,0.0,0.0);
+    if (evflag) ev_tally_full(i,evdwl_3*2.0,0.0,0.0,0.0,0.0,0.0);   // I JUST CHANGED THIS
 
 
     force_prefactor = (Wisq - pow(params[iiparam].W0,2)) * (-2.0 * params[iiparam].D);
@@ -263,37 +263,37 @@ void PairBVV::compute(int eflag, int vflag)
 
 	fj[0] = exp_prefact * delr2[0] * r1inv * r2inv;
         fj[0] -= exp_prefact * cosine_theta * delr1[0] * r1inv * r1inv * params[ijparam].C0;
-	fj[0] += exp_prefact * cosine_theta * delr1[0] * r1inv * r1inv;
+	fj[0] -= exp_prefact * cosine_theta * delr1[0] * r1inv * r1inv;
         fjxtmp += fj[0] * force_prefactor;
 	fj_prefact[0] = fj[0] * force_prefactor; // (delr1[0] + 0.0001);
 
         fk[0] = exp_prefact * delr1[0] * r1inv * r2inv;
         fk[0] -= exp_prefact * cosine_theta * delr2[0] * r2inv * r2inv * params[ikparam].C0;
-	fk[0] += exp_prefact * cosine_theta * delr2[0] * r2inv * r2inv;
+	fk[0] -= exp_prefact * cosine_theta * delr2[0] * r2inv * r2inv;
         fkxtmp = fk[0] * force_prefactor;
 	fk_prefact[0] = fk[0] * force_prefactor; // (delr2[0] + 0.0001);
 
         fj[1] = exp_prefact * delr2[1] * r1inv * r2inv;
         fj[1] -= exp_prefact * cosine_theta * delr1[1] * r1inv * r1inv * params[ijparam].C0;
-	fj[1] += exp_prefact * cosine_theta * delr1[1] * r1inv * r1inv;
+	fj[1] -= exp_prefact * cosine_theta * delr1[1] * r1inv * r1inv;
         fjytmp += fj[1] * force_prefactor;
 	fj_prefact[1] = fj[1] * force_prefactor; // (delr1[1] + 0.0001);
 
         fk[1] = exp_prefact * delr1[1] * r1inv * r2inv;
         fk[1] -= exp_prefact * cosine_theta * delr2[1] * r2inv * r2inv * params[ikparam].C0;
-	fk[1] += exp_prefact * cosine_theta * delr2[1] * r2inv * r2inv;
+	fk[1] -= exp_prefact * cosine_theta * delr2[1] * r2inv * r2inv;
         fkytmp = fk[1] * force_prefactor;
 	fk_prefact[1] = fk[1] * force_prefactor; // (delr2[1] + 0.0001);
 
         fj[2] = exp_prefact * delr2[2] * r1inv * r2inv;
         fj[2] -= exp_prefact * cosine_theta * delr1[2] * r1inv * r1inv * params[ijparam].C0;
-	fj[2] += exp_prefact * cosine_theta * delr1[2] * r1inv * r1inv;
+	fj[2] -= exp_prefact * cosine_theta * delr1[2] * r1inv * r1inv;
         fjztmp += fj[2] * force_prefactor;
 	fj_prefact[2] = fj[2] * force_prefactor; // (delr1[2] + 0.0001);
 
 	fk[2] = exp_prefact * delr1[2] * r1inv * r2inv;
         fk[2] -= exp_prefact * cosine_theta * delr2[2] * r2inv * r2inv * params[ikparam].C0;
-	fk[2] += exp_prefact * cosine_theta * delr2[2] * r2inv * r2inv;
+	fk[2] -= exp_prefact * cosine_theta * delr2[2] * r2inv * r2inv;
         fkztmp = fk[2] * force_prefactor;
 	fk_prefact[2] = fk[2] * force_prefactor; // (delr2[2] + 0.0001);
 
@@ -305,7 +305,7 @@ void PairBVV::compute(int eflag, int vflag)
         f[k][1] += fkytmp;
         f[k][2] += fkztmp;
 
-        if (evflag) ev_tally3(i,j,k,0.0,0.0,fj_prefact,fk_prefact,delr1,delr2);
+        if (evflag) ev_tally3(i,j,k,0.0,0.0,fj_prefact,fk_prefact,delr1,delr2);  // I JUST CHANGED THIS
 	//if (evflag) ev_tally_xyz(i,j,nlocal,newton_pair,0.0,0.0,fj_prefact[0],fj_prefact[1],fj_prefact[2],delr1[0],delr1[1],delr1[2]);
 	//if (evflag) ev_tally_xyz(i,k,nlocal,newton_pair,0.0,0.0,fk_prefact[0],fk_prefact[1],fk_prefact[2],delr2[0],delr2[1],delr2[2]);
 
@@ -320,7 +320,7 @@ void PairBVV::compute(int eflag, int vflag)
     f[i][2] += fiztmp;
   }
 
-  //if (vflag_fdotr) virial_fdotr_compute();
+  if (vflag_fdotr) virial_fdotr_compute();
 }
 
 /* ---------------------------------------------------------------------- */
